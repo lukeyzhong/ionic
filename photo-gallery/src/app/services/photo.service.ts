@@ -44,18 +44,20 @@ export class PhotoService {
     const photoList = await Storage.get({ key: this.PHOTO_STORAGE });
     this.photos = JSON.parse(photoList.value) || [];
 
-    // more to come...
+    // Easiest way to detect when running on the web:
+    // “when the platform is NOT hybrid, do this”
+    if (!this.platform.is('hybrid')) {
+      // Display the photo by reading into base64 format
+      for (const photo of this.photos) {
+        // Read each saved photo's data from the Filesystem
+        const readFile = await Filesystem.readFile({
+          path: photo.filepath,
+          directory: Directory.Data
+        });
 
-    // Display the photo by reading into base64 format
-    for (const photo of this.photos) {
-      // Read each saved photo's data from the Filesystem
-      const readFile = await Filesystem.readFile({
-        path: photo.filepath,
-        directory: Directory.Data,
-      });
-
-      // Web platform only: Load the photo as base64 data
-      photo.webviewPath = `data:image/jpeg;base64,${readFile.data}`;
+        // Web platform only: Load the photo as base64 data
+        photo.webviewPath = `data:image/jpeg;base64,${readFile.data}`;
+      }
     }
   }
 
@@ -91,21 +93,21 @@ export class PhotoService {
 
   private async readAsBase64(photo: Photo) {
     // "hybrid" will detect Cordova or Capacitor
-  if (this.platform.is('hybrid')) {
-    // Read the file into base64 format
-    const file = await Filesystem.readFile({
-      path: photo.path
-    });
+    if (this.platform.is('hybrid')) {
+      // Read the file into base64 format
+      const file = await Filesystem.readFile({
+        path: photo.path
+      });
 
-    return file.data;
-  }
-  else {
-    // Fetch the photo, read as a blob, then convert to base64 format
-    const response = await fetch(photo.webPath);
-    const blob = await response.blob();
+      return file.data;
+    }
+    else {
+      // Fetch the photo, read as a blob, then convert to base64 format
+      const response = await fetch(photo.webPath);
+      const blob = await response.blob();
 
-    return await this.convertBlobToBase64(blob) as string;
-  }
+      return await this.convertBlobToBase64(blob) as string;
+    }
   }
   private convertBlobToBase64 = (blob: Blob) => new Promise((resolve, reject) => {
     const reader = new FileReader();
